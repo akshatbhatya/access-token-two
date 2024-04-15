@@ -1,18 +1,66 @@
-import asyncHandler from "../utils/asyncHandler.js";
-import ApiError from "../utils/apiError.js"
-const userRegister=asyncHandler((req,res)=>{
-    const {userName,email,fullName,password}=req.body;
-    
+import asyncHandler from '../utils/asyncHandler.js';
+import ApiError from '../utils/apiError.js';
+import { user } from '../models/user.model.js';
+import fileUploder from '../utils/cloudinary.js';
+import ApiResponse from '../utils/apiResponse.js';
 
-    // check all fields are empty or not '
+const userRegister = asyncHandler(async (req, res) => {
+  const { userName, email, fullName, password, avtar, coverAvtar } = req.body;
 
-    if([userName,email,fullName,password].some((fields)=>fields?.trim()==="")){
-        throw new ApiError(400,"all filds are required not be empty")
-    }
+  // check all fields are empty or not '
 
-    res.send("ok 200")
+  if (
+    [userName, email, fullName, password].some(
+      (fields) => fields?.trim() === ''
+    )
+  ) {
+    throw new ApiError(400, 'all filds are required not be empty');
+  }
 
+  // check user exists or not
+
+  const findUser = await user.findOne({
+    $or: [{ userName }, { email }],
+  });
+
+  if (findUser) {
+    throw new ApiError(400, 'user alredy exists');
+  }
+
+  // upload images
+
+  const avtarImage = req?.files?.avtar[0]?.path;
+  const coverAvtarImage = req?.files?.coverAvtar[0]?.path || '';
+
+  //  upload files
+
+  const uplodedAvtar = await fileUploder(avtarImage);
+  const uplodedCoverAvtar = await fileUploder(coverAvtarImage);
+
+  if (!uplodedAvtar) {
+    throw new ApiError(400, 'avtar is required');
+  }
+
+  //  add data to mongo db
+
+  const newUser = {
+    userName: userName.toLowerCase(),
+    email: email.toLowerCase(),
+    avtar: uplodedAvtar.url,
+    coverAvtar: uplodedCoverAvtar.url,
+    fullName: fullName.toLowerCase(),
+    password,
+  };
+
+  const createUser = await user.create(newUser);
+
+  if (!createUser) {
+    throw new ApiError(500, 'internal error user is not created ');
+  }
+
+  res.status(200).json(new ApiResponse(200, 'user created sucessfully'));
 });
 
+export { userRegister };
 
-export {userRegister};
+// check fields are empty or not check user existance add photos to file create user
