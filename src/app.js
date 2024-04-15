@@ -29,5 +29,5 @@ app.use(cookieParser());
 import router from './routes/user.routes.js';
 
 
-app.use("http://localhost:3000",router);
+app.use("/api/v1/users",router);
 export default app;
