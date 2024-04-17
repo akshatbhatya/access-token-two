@@ -17,17 +17,19 @@ const authHandler = asyncHandler(async (req, res, next) => {
 
     const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN);
 
-    const user = await user
+    const Ouruser = await user
       .findOne(decodedToken?._id)
       .select('-pasword -refreshToken');
 
-    if (!user) {
+    if (!Ouruser) {
       throw new ApiError(401, 'invalid access');
     }
 
-    req.user = user;
+    req.user = Ouruser;
     next();
   } catch (error) {
     throw new ApiError(400, error || 'invalid acces token');
   }
 });
+
+export default authHandler;
