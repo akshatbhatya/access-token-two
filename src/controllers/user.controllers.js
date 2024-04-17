@@ -13,8 +13,8 @@ const generateTokens = async (userId) => {
 
     ourLogInUser.refreshToken = generatedTokenRefreshToken;
     await ourLogInUser.save({ validateBeforeSave: false });
-    
-    return {generatedTokenAcesssToken,generatedTokenRefreshToken};
+
+    return { generatedTokenAcesssToken, generatedTokenRefreshToken };
   } catch (error) {
     throw new ApiError(500, 'something Went Wrong In Genereated Tokens');
   }
@@ -99,11 +99,30 @@ const login = asyncHandler(async (req, res) => {
 
   // generate tokens
 
-  const { refreshToken, accesstoken } = await generateTokens(
-    currentUser._id
-  );
+  const { generatedTokenAcesssToken, generatedTokenRefreshToken } =
+    await generateTokens(currentUser._id);
 
+  const logedUser = await user
+    .findById(currentUser._id)
+    .select('-password -refreshToken');
+
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  return res
+    .status(200)
+    .cookie('accessToken', generatedTokenAcesssToken, options)
+    .cookie('refreshToken', generatedTokenRefreshToken, options)
+    .json(
+
+      new ApiResponse(200, 'user Loged In SucessFully ',
+      {
+        data: logedUser,
+        generatedTokenAcesssToken,
+        generatedTokenRefreshToken,
+      })
+    );
 });
 export { userRegister, login };
-
-// check fields are empty or not check user existance add photos to file create user
