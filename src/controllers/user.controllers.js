@@ -4,6 +4,22 @@ import { user } from '../models/user.model.js';
 import fileUploder from '../utils/cloudinary.js';
 import ApiResponse from '../utils/apiResponse.js';
 
+const generateTokens = async (userId) => {
+  try {
+    const ourLogInUser = user.findById(userId);
+    const generatedTokenAcesssToken = await ourLogInUser.generateAccessToken();
+    const generatedTokenRefreshToken =
+      await ourLogInUser.generateRefreshToken();
+
+    ourLogInUser.refreshToken = generatedTokenRefreshToken;
+    await ourLogInUser.save({ validateBeforeSave: false });
+    
+    return {generatedTokenAcesssToken,generatedTokenRefreshToken};
+  } catch (error) {
+    throw new ApiError(500, 'something Went Wrong In Genereated Tokens');
+  }
+};
+
 const userRegister = asyncHandler(async (req, res) => {
   const { userName, email, fullName, password, avtar, coverAvtar } = req.body;
 
@@ -61,6 +77,33 @@ const userRegister = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, 'user created sucessfully'));
 });
 
-export { userRegister };
+const login = asyncHandler(async (req, res) => {
+  const { userName, email, password } = req.body;
+
+  if (!userName || !email) {
+    throw new ApiError(400, 'username either email is required');
+  }
+
+  const currentUser = user.findOne({
+    $or: [{ userName }, { email }],
+  });
+
+  if (!currentUser) {
+    throw new ApiError(404, 'user not found');
+  }
+
+  const checkPassword = await currentUser.comparePassword(password);
+  if (!checkPassword) {
+    throw new ApiError(400, 'password is incorrect');
+  }
+
+  // generate tokens
+
+  const { refreshToken, accesstoken } = await generateTokens(
+    currentUser._id
+  );
+
+});
+export { userRegister, login };
 
 // check fields are empty or not check user existance add photos to file create user
